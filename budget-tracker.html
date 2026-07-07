@@ -121,7 +121,7 @@ body{font-family:-apple-system,system-ui,"Segoe UI",sans-serif;background:#f1f5f
 <div class="setup" id="setupScreen">
   <div class="setup-card">
     <h2>Connect Google Sheets</h2>
-    <p>Paste your Google Apps Script URL below so every expense is saved permanently to your Google Sheet. See the setup guide for instructions.</p>
+    <p>Paste your Google Apps Script URL below so every expense is saved permanently to your Google Sheet. After connecting, re-add this page to your home screen so the link is saved forever.</p>
     <input type="url" id="scriptUrlInput" placeholder="https://script.google.com/macros/s/..." autocomplete="off">
     <button onclick="saveSetup()">Connect</button>
     <button class="skip" onclick="skipSetup()">Skip — use without Google Sheets</button>
@@ -217,7 +217,15 @@ function monthKey() { const d=new Date(); return d.getFullYear()+"-"+String(d.ge
 function monthName() { const d=new Date(); return d.toLocaleDateString("en-IE",{month:"long"})+"-"+d.getFullYear(); }
 
 // ─── State ───
-let scriptUrl = localStorage.getItem("bt_script_url") || "";
+function getHashParam(key) {
+  try { return new URLSearchParams(location.hash.slice(1)).get(key) || ""; } catch(e) { return ""; }
+}
+function setHashParam(key, val) {
+  const p = new URLSearchParams(location.hash.slice(1));
+  if (val) p.set(key, val); else p.delete(key);
+  location.hash = p.toString();
+}
+let scriptUrl = getHashParam("gs") || localStorage.getItem("bt_script_url") || "";
 let budgets = {};
 let expenses = [];
 let selectedCat = "groceries";
@@ -231,7 +239,12 @@ function saveSetup() {
   if (!url) return;
   scriptUrl = url;
   localStorage.setItem("bt_script_url", url);
+  setHashParam("gs", url);
   showApp();
+  // Remind user to re-add to home screen with the new URL
+  setTimeout(() => {
+    alert("Connected! If you're using this from your home screen, please re-add it now so the connection is saved permanently.\n\nSafari → Share → Add to Home Screen");
+  }, 500);
 }
 
 function skipSetup() {
@@ -422,6 +435,7 @@ function saveBudgets() {
   if (newUrl !== scriptUrl) {
     scriptUrl = newUrl;
     localStorage.setItem("bt_script_url", newUrl);
+    setHashParam("gs", newUrl);
     const dot = document.getElementById("statusDot");
     const txt = document.getElementById("statusText");
     if (scriptUrl) { dot.className="dot on"; txt.textContent="Connected to Google Sheets"; }

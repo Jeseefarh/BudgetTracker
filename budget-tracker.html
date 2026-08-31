@@ -222,6 +222,11 @@ input,button{font-family:inherit}
   <div class="hdr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span>Expense Log</span></div>
   <div class="month-nav"><button onclick="logMP()">‹</button><span id="logML"></span><button onclick="logMN()">›</button></div>
   <div class="card log-summary"><span>Total: <b id="logTot">€0.00</b></span><span>Entries: <b id="logCnt">0</b></span></div>
+  <div class="card" style="padding:14px 18px;text-align:center">
+    <div style="font-size:12px;color:var(--sub);text-transform:uppercase;letter-spacing:.4px">Money Remaining / Saved</div>
+    <div id="logSaved" style="font-size:28px;font-weight:700;margin-top:4px;color:var(--green)">€0.00</div>
+    <div style="font-size:12px;color:var(--sub);margin-top:2px"><span id="logBudLabel">Budget €0.00</span> − <span id="logSpentLabel">Spent €0.00</span></div>
+  </div>
   <div class="card" style="padding:0"><div id="logList"></div><span class="empty" id="logE">No entries this month.</span></div>
 </div>
 
@@ -245,6 +250,13 @@ input,button{font-family:inherit}
   <div class="hdr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg><span>Settings</span></div>
   <span class="sct">Monthly Budgets</span>
   <div class="month-nav"><button onclick="budMP()">‹</button><span id="budML"></span><button onclick="budMN()">›</button></div>
+  <div class="card" style="padding:14px 16px;margin-bottom:4px">
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <span style="font-size:15px;font-weight:700;color:var(--ocean-d)">💰 Total Monthly Budget</span>
+      <div style="display:flex;align-items:center;gap:4px"><span style="font-size:14px;color:var(--sub)">€</span><input type="number" inputmode="decimal" id="bf-total" placeholder="0" style="width:110px;padding:10px;border-radius:10px;border:1.5px solid var(--border);font-size:17px;font-weight:700;text-align:right;outline:none;background:var(--sand);color:var(--ocean-d)"></div>
+    </div>
+    <div style="font-size:12px;color:var(--sub);margin-top:6px">Your salary or total income for this month</div>
+  </div>
   <div class="card" id="budF"></div>
   <div style="display:flex;gap:8px;padding:0 4px"><button class="copy-btn" onclick="copyPrev()">📋 Copy from previous month</button></div>
   <button class="s-save" style="width:100%;margin-top:4px" onclick="saveBuds()">Save Budgets</button>
@@ -312,7 +324,7 @@ function startApp(){document.getElementById("setupScreen").classList.add("hide")
 // ── TRACKER ──
 function rT(){
   const b=lb(mk()),spBy={};cats.forEach(c=>spBy[c.id]=0);exps.forEach(e=>spBy[e.cat]=(spBy[e.cat]||0)+e.amount);
-  const tB=cats.reduce((s,c)=>s+(b[c.id]||0),0),tS=exps.reduce((s,e)=>s+e.amount,0),tR=tB-tS,tP=tB>0?Math.min(100,tS/tB*100):0;
+  const tB=b._total||cats.reduce((s,c)=>s+(b[c.id]||0),0),tS=exps.reduce((s,e)=>s+e.amount,0),tR=tB-tS,tP=tB>0?Math.min(100,tS/tB*100):0;
   document.getElementById("totRem").textContent=fmt(tR);document.getElementById("totSpent").textContent=fmt(tS);document.getElementById("totBud").textContent=fmt(tB);
   document.getElementById("balCard").className="bal"+(tR<0?" over":"");
   const bar=document.getElementById("totBar");bar.style.width=tP+"%";bar.className="bar-f"+(tP>85?" warn":"");
@@ -349,7 +361,15 @@ function delE(id){exps=exps.filter(e=>e.id!==id);se(mk(),exps);rT();synD(id)}
 function rLog(){
   document.getElementById("logML").textContent=mn(logM);
   const d=logM===mk()?exps:le(logM);
-  document.getElementById("logTot").textContent=fmt(d.reduce((s,e)=>s+e.amount,0));document.getElementById("logCnt").textContent=d.length;
+  const logSpent=d.reduce((s,e)=>s+e.amount,0);
+  const logBud=lb(logM);
+  const logTotal=logBud._total||cats.reduce((s,c)=>s+(logBud[c.id]||0),0);
+  const logSaved=logTotal-logSpent;
+  document.getElementById("logTot").textContent=fmt(logSpent);document.getElementById("logCnt").textContent=d.length;
+  document.getElementById("logSaved").textContent=fmt(logSaved);
+  document.getElementById("logSaved").style.color=logSaved>=0?"var(--green)":"var(--red)";
+  document.getElementById("logBudLabel").textContent="Budget "+fmt(logTotal);
+  document.getElementById("logSpentLabel").textContent="Spent "+fmt(logSpent);
   const list=document.getElementById("logList"),em=document.getElementById("logE");
   if(!d.length){em.style.display="block";list.innerHTML="";return}em.style.display="none";
   const sorted=[...d].sort((a,b)=>new Date(a.date)-new Date(b.date));
@@ -363,7 +383,7 @@ function logMN(){if(!canNext(logM))return;logM=nm(logM);rLog()}
 // ── DASHBOARD ──
 function rDash(){
   const b=lb(mk()),spBy={};cats.forEach(c=>spBy[c.id]=0);exps.forEach(e=>spBy[e.cat]=(spBy[e.cat]||0)+e.amount);
-  const tB=cats.reduce((s,c)=>s+(b[c.id]||0),0),tS=exps.reduce((s,e)=>s+e.amount,0),tR=tB-tS;
+  const tB=b._total||cats.reduce((s,c)=>s+(b[c.id]||0),0),tS=exps.reduce((s,e)=>s+e.amount,0),tR=tB-tS;
   const today=new Date();const dom=today.getDate()||1;const avgDay=dom>0?(tS/dom):0;
   const topCat=cats.reduce((best,c)=>(spBy[c.id]||0)>(best.v||0)?{c:c,v:spBy[c.id]||0}:best,{c:null,v:0});
   const pctUsed=tB>0?Math.round(tS/tB*100):0;
@@ -377,10 +397,9 @@ function rDash(){
     <div class="kpi"><div class="kv">${exps.length}</div><div class="kl">Transactions</div></div>
     <div class="kpi wide"><div class="kv" style="font-size:18px;color:${topCat.c?topCat.c.color:'var(--sub)'}">${topCat.c?esc(topCat.c.label)+'  ·  '+fmt(topCat.v):'—'}</div><div class="kl">Top Spending Category</div></div>`;
 
-  // Category spending chart
-  const maxSp=Math.max(...cats.map(c=>spBy[c.id]||0),1);
+  // Category spending chart — bars relative to each category's own budget
   document.getElementById("chartCat").innerHTML=cats.map(c=>{
-    const sp=spBy[c.id]||0;const w=Math.max(2,sp/maxSp*100);
+    const cb=b[c.id]||0,sp=spBy[c.id]||0;const w=cb>0?Math.min(100,Math.max(2,sp/cb*100)):Math.min(100,sp>0?50:2);
     return`<div class="hbar-row"><span class="hbar-label">${esc(c.label)}</span><div class="hbar-track"><div class="hbar-fill" style="width:${w}%;background:${c.color}"></div><span class="hbar-val">${fmt(sp)}</span></div></div>`}).join("");
 
   // Utilization chart
@@ -431,7 +450,10 @@ function rDash(){
   days.forEach((d,i)=>{svg+=`<circle cx="${cx(i)}" cy="${cy(d.total)}" r="${d.total>0?5:3}" class="data-pt" data-idx="${i}" onclick="showTip(${i},this)"/>`});
 
   svg+=`</svg>`;
-  document.getElementById("dchartSvg").outerHTML=svg;
+  const wrap=document.getElementById("dchartWrap");
+  const tip=wrap.querySelector(".dchart-tip");
+  wrap.innerHTML=svg;
+  wrap.appendChild(tip||Object.assign(document.createElement("div"),{className:"dchart-tip",id:"dchartTip"}));
 
   // Store days data for tooltip
   window._chartDays=days;
@@ -477,12 +499,13 @@ function rSet(){
   document.getElementById("sUrl").value=su;
   document.getElementById("budML").textContent=mn(budM);
   const b=lb(budM);
+  document.getElementById("bf-total").value=b._total||"";
   document.getElementById("budF").innerHTML=cats.map(c=>`<div class="bud-row"><span class="bdot" style="background:${c.color}"></span><span class="blbl">${esc(c.label)}</span><input type="number" inputmode="decimal" id="bf-${c.id}" value="${b[c.id]||''}" placeholder="0"></div>`).join("");
   document.getElementById("catS").innerHTML=cats.map(c=>`<div class="s-row"><span class="sdot" style="background:${c.color}"></span><span class="slbl">${esc(c.label)}</span><span class="sactions"><button onclick="editC('${c.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></button><button class="del-btn" onclick="delC('${c.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button></span></div>`).join("")}
 function budMP(){budM=pm(budM);rSet()}
 function budMN(){if(!canNext(budM))return;budM=nm(budM);rSet()}
-function saveBuds(){const b={};cats.forEach(c=>{b[c.id]=parseFloat(String(document.getElementById("bf-"+c.id).value).replace(",","."))||0});sb(budM,b);toast("Budgets saved for "+mn(budM));if(budM===mk())rT();synB(budM)}
-function copyPrev(){const pb=lb(pm(budM));if(!Object.keys(pb).length){toast("No budgets for "+mn(pm(budM)));return}cats.forEach(c=>{const el=document.getElementById("bf-"+c.id);if(el)el.value=pb[c.id]||""});toast("Copied — tap Save Budgets")}
+function saveBuds(){const b={};b._total=parseFloat(String(document.getElementById("bf-total").value).replace(",","."))||0;cats.forEach(c=>{b[c.id]=parseFloat(String(document.getElementById("bf-"+c.id).value).replace(",","."))||0});sb(budM,b);toast("Budgets saved for "+mn(budM));if(budM===mk())rT();synB(budM)}
+function copyPrev(){const pb=lb(pm(budM));if(!Object.keys(pb).length){toast("No budgets for "+mn(pm(budM)));return}document.getElementById("bf-total").value=pb._total||"";cats.forEach(c=>{const el=document.getElementById("bf-"+c.id);if(el)el.value=pb[c.id]||""});toast("Copied — tap Save Budgets")}
 function saveUrl(){const u=document.getElementById("sUrl").value.trim();su=u;localStorage.setItem("bt_url",u);hpS("gs",u);const d=document.getElementById("sDot"),t=document.getElementById("sTxt");if(su){d.className="dot on";t.textContent="Connected to Google Sheets"}else{d.className="dot off";t.textContent="Offline — connect in Settings"}toast(u?"Connected ✓":"Disconnected")}
 
 // ── Category CRUD ── (fixed delete)
@@ -510,7 +533,7 @@ function delC(id){
 function seedIfNeeded(){
   if(localStorage.getItem("bt_s3"))return;
   if(!localStorage.getItem("bt_cats"))localStorage.setItem("bt_cats",JSON.stringify(DC));
-  if(!localStorage.getItem(bk("2026-08")))sb("2026-08",{c1:300,c2:200,c3:2150,c4:100,c5:2130});
+  if(!localStorage.getItem(bk("2026-08")))sb("2026-08",{_total:4880,c1:300,c2:200,c3:2150,c4:100,c5:2130});
   if(!localStorage.getItem(ek("2026-08")))se("2026-08",[{"id":1787821570625,"amount":10,"note":"BrewDog cab","cat":"c4","date":"2026-08-27T12:00:00.000Z"},{"id":1787821556923,"amount":36,"note":"Brewdog","cat":"c4","date":"2026-08-27T12:00:00.000Z"},{"id":1787821494563,"amount":22,"note":"Reyna+ shaking lab","cat":"c4","date":"2026-08-27T12:00:00.000Z"},{"id":1787821454725,"amount":20,"note":"Leap cars","cat":"c4","date":"2026-08-27T12:00:00.000Z"},{"id":1787821447109,"amount":30,"note":"Supervalue + dunnes","cat":"c1","date":"2026-08-27T12:00:00.000Z"},{"id":1786885217185,"amount":1000,"note":"India home","cat":"c3","date":"2026-08-16T12:00:00.000Z"},{"id":1786884847744,"amount":18.4,"note":"Kunal kamra","cat":"c5","date":"2026-08-16T12:00:00.000Z"},{"id":1786884493807,"amount":15,"note":"Wcmt","cat":"c5","date":"2026-08-16T12:00:00.000Z"},{"id":1786884439623,"amount":13.16,"note":"Nando's","cat":"c5","date":"2026-08-16T12:00:00.000Z"},{"id":1786884283738,"amount":9.64,"note":"Bombay bazar","cat":"c1","date":"2026-08-16T12:00:00.000Z"},{"id":1786884266311,"amount":8,"note":"Supervalue","cat":"c1","date":"2026-08-16T12:00:00.000Z"},{"id":1786541491625,"amount":10,"note":"Leap card","cat":"c4","date":"2026-08-12T12:00:00.000Z"},{"id":1786541475045,"amount":36,"note":"Dinner with c and R","cat":"c5","date":"2026-08-12T12:00:00.000Z"},{"id":1786541439111,"amount":11.7,"note":"Supervalue","cat":"c1","date":"2026-08-12T12:00:00.000Z"},{"id":1786367688090,"amount":30,"note":"Zara","cat":"c2","date":"2026-08-10T12:00:00.000Z"},{"id":1786367679674,"amount":28.8,"note":"Tapped","cat":"c2","date":"2026-08-10T12:00:00.000Z"},{"id":1786367599629,"amount":9,"note":"Reyna","cat":"c2","date":"2026-08-10T12:00:00.000Z"},{"id":1786367590780,"amount":23.5,"note":"Wcmt concert","cat":"c2","date":"2026-08-10T12:00:00.000Z"},{"id":1786348690464,"amount":30,"note":"Zara pant","cat":"c2","date":"2026-08-10T12:00:00.000Z"},{"id":1786348666887,"amount":10,"note":"Leap card","cat":"c4","date":"2026-08-10T12:00:00.000Z"},{"id":1786348655762,"amount":14.57,"note":"Dunnes","cat":"c1","date":"2026-08-10T12:00:00.000Z"},{"id":1786188734041,"amount":500,"note":"Deal","cat":"c3","date":"2026-08-08T12:00:00.000Z"},{"id":1786188719523,"amount":500,"note":"Rent","cat":"c3","date":"2026-08-08T12:00:00.000Z"},{"id":1786188705639,"amount":17,"note":"Tesco","cat":"c1","date":"2026-08-08T12:00:00.000Z"},{"id":1785873101820,"amount":8.4,"note":"Popeyes-ubereats","cat":"c2","date":"2026-08-04T12:00:00.000Z"},{"id":1785873077003,"amount":17.94,"note":"Tesco","cat":"c1","date":"2026-08-04T12:00:00.000Z"},{"id":1785863559969,"amount":20,"note":"Vodafone","cat":"c4","date":"2026-08-04T12:00:00.000Z"},{"id":1785790411155,"amount":120,"note":"Luxury dinner","cat":"c5","date":"2026-08-03T12:00:00.000Z"},{"id":1785680549668,"amount":17.99,"note":"Cineworld","cat":"c2","date":"2026-08-02T12:00:00.000Z"},{"id":1785680529334,"amount":7.84,"note":"Krispy creme","cat":"c2","date":"2026-08-02T12:00:00.000Z"},{"id":1785680516419,"amount":10.08,"note":"Cineworld popcorn","cat":"c2","date":"2026-08-02T12:00:00.000Z"},{"id":1785680179287,"amount":20.11,"note":"Supervalue","cat":"c1","date":"2026-08-02T12:00:00.000Z"},{"id":1785680162859,"amount":27.81,"note":"Chai met toast","cat":"c2","date":"2026-08-02T12:00:00.000Z"},{"id":1785592475191,"amount":22.47,"note":"Dunnes","cat":"c1","date":"2026-08-01T12:00:00.000Z"},{"id":1785592458397,"amount":20,"note":"Leap card","cat":"c4","date":"2026-08-01T12:00:00.000Z"}]);
   if(!localStorage.getItem(ek("2026-07")))se("2026-07",[{"id":1785529736274,"amount":7.98,"note":"Crispy creme","cat":"c2","date":"2026-07-31T12:00:00.000Z"},{"id":1785515503652,"amount":10.08,"note":"Cineworld","cat":"c2","date":"2026-07-31T12:00:00.000Z"}]);
   localStorage.setItem("bt_s3","1");

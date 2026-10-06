@@ -37,6 +37,9 @@ input,button{font-family:inherit}
 .hdr{background:linear-gradient(135deg,var(--ocean),var(--ocean-l));color:#fff;padding:16px 20px 14px;border-radius:18px;display:flex;align-items:center;gap:10px;box-shadow:0 4px 16px rgba(2,132,199,.2)}
 .hdr svg{width:20px;height:20px;opacity:.9}
 .hdr span{font-size:16px;font-weight:600}
+.hdr .mbtn{width:36px;height:36px;border-radius:11px;border:none;background:rgba(255,255,255,.22);color:#fff;font-size:22px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.hdr .mbtn:active{background:rgba(255,255,255,.4)}
+.date-i{flex:1;min-width:0;color:var(--text)}
 .card{background:var(--card);border-radius:18px;padding:16px;box-shadow:0 2px 8px rgba(2,132,199,.06);border:1px solid rgba(191,227,245,.4)}
 .bal{background:linear-gradient(135deg,var(--ocean-d),var(--ocean),var(--ocean-l));color:#fff;display:flex;flex-direction:column;gap:6px;border-radius:20px;padding:22px;position:relative;overflow:hidden;box-shadow:0 6px 24px rgba(2,132,199,.25)}
 .bal::after{content:'';position:absolute;top:-30px;right:-30px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,.08)}
@@ -205,7 +208,7 @@ input,button{font-family:inherit}
 
 <!-- TRACKER -->
 <div class="page" id="page-tracker">
-  <div class="hdr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg><span id="monthLabel"></span></div>
+  <div class="hdr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg><span id="monthLabel"></span><button class="mbtn" style="margin-left:auto" onclick="trkMP()" aria-label="Previous month">‹</button><button class="mbtn" onclick="trkMN()" aria-label="Next month">›</button></div>
   <div class="bal" id="balCard">
     <span class="lbl">Total Remaining</span>
     <span class="big" id="totRem">€0.00</span>
@@ -215,6 +218,7 @@ input,button{font-family:inherit}
   <div class="card cat-list" id="catBreak"></div>
   <div class="card" id="addCard">
     <div class="add-label" id="addLabel">Adding to: <span class="al-dot" id="alDot"></span> <span id="alName"></span></div>
+    <div class="irow"><input type="date" id="dateIn" class="date-i" aria-label="Date"></div>
     <div class="irow">
       <input type="number" inputmode="decimal" id="amtIn" class="amt-i" placeholder="0.00 €">
       <input type="text" id="noteIn" class="note-i" placeholder="Note (optional)">
@@ -247,13 +251,13 @@ input,button{font-family:inherit}
 
 <!-- DASHBOARD -->
 <div class="page" id="page-dash">
-  <div class="hdr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg><span>Dashboard</span></div>
+  <div class="hdr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg><span id="dashHdr">Dashboard</span></div>
   <div class="kpi-grid" id="kpis"></div>
   <span class="chart-title">Spending by Category</span>
   <div class="card hbar" id="chartCat"></div>
   <span class="chart-title">Budget Utilization</span>
   <div class="card hbar" id="chartUtil"></div>
-  <span class="chart-title">Daily Spending (Last 14 Days)</span>
+  <span class="chart-title" id="dTitle">Daily Spending (Last 14 Days)</span>
   <div class="card dchart-wrap" id="dchartWrap">
     <svg id="dchartSvg" class="dchart-svg"></svg>
     <div class="dchart-tip" id="dchartTip"></div>
@@ -329,6 +333,7 @@ function hpS(k,v){const p=new URLSearchParams(location.hash.slice(1));if(v)p.set
 function toast(m){const t=document.getElementById("toast");t.textContent=m;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),1800)}
 
 // ── STATE ──
+let curM=mk();
 let db=null, fbReady=false, useFirebase=false;
 let su=hp("gs")||""; // Google Sheets URL
 let cats=[],exps=[],selCat="",fCat="all",logM=mk(),budM=mk(),editId=null,pickedC=P[0];
@@ -421,7 +426,7 @@ function listenMonth(m){
 
   unsubExp=fsDoc("exp_"+m).onSnapshot(function(snap){
     if(snap.exists&&snap.data().items){
-      if(m===mk()){exps=snap.data().items;rT()}
+      if(m===curM){exps=snap.data().items;rT()}
       expCache[m]=snap.data().items;
     }
   });
@@ -429,7 +434,7 @@ function listenMonth(m){
     if(snap.exists){
       const d=snap.data();
       budgetCache[m]=d;
-      if(m===mk())rT();
+      if(m===curM)rT();
     }
   });
 }
@@ -453,7 +458,7 @@ function lb(m){
   return {};
 }
 function le(m){
-  if(m===mk())return exps;
+  if(m===curM)return exps;
   if(expCache[m])return expCache[m];
   if(!useFirebase){const d=lsGetExp(m);expCache[m]=d;return d}
   return [];
@@ -462,12 +467,12 @@ function le(m){
 // ── GOOGLE SHEETS SYNC (optional backup) ──
 function gp(pl){if(!su)return;try{fetch(su,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain"},body:JSON.stringify(pl)}).then(()=>toast("Saved to Sheet ✓")).catch(()=>{})}catch(e){}}
 function msn(m){const[y,mo]=m.split("-");return new Date(y,mo-1).toLocaleDateString("en-IE",{month:"long"})+"-"+y}
-function synA(e){const c=cats.find(x=>x.id===e.cat);const b=lb(mk());const sp=exps.filter(x=>x.cat===e.cat).reduce((s,x)=>s+x.amount,0);gp({action:"add_expense",month:msn(mk()),id:e.id,date:new Date(e.date).toLocaleDateString("en-IE"),category:c?c.label:e.cat,note:e.note,amount:e.amount,catBudget:b[e.cat]||0,catRemaining:(b[e.cat]||0)-sp})}
-function synD(id){gp({action:"delete_expense",month:msn(mk()),id:id})}
+function synA(e){const c=cats.find(x=>x.id===e.cat);const b=lb(curM);const sp=exps.filter(x=>x.cat===e.cat).reduce((s,x)=>s+x.amount,0);gp({action:"add_expense",month:msn(curM),id:e.id,date:new Date(e.date).toLocaleDateString("en-IE"),category:c?c.label:e.cat,note:e.note,amount:e.amount,catBudget:b[e.cat]||0,catRemaining:(b[e.cat]||0)-sp})}
+function synD(id){gp({action:"delete_expense",month:msn(curM),id:id})}
 function synB(m){const b=lb(m);gp({action:"save_budgets",budgets:cats.map(c=>({category:c.label,budget:b[c.id]||0}))})}
 
 // ── NAVIGATION ──
-function sp(p){["tracker","log","dash","settings"].forEach(x=>{document.getElementById("page-"+x).classList.toggle("active",x===p);document.getElementById("n-"+x).classList.toggle("on",x===p)});if(p==="log")rLog();if(p==="dash")rDash();if(p==="settings"){budM=mk();rSet()}}
+function sp(p){["tracker","log","dash","settings"].forEach(x=>{document.getElementById("page-"+x).classList.toggle("active",x===p);document.getElementById("n-"+x).classList.toggle("on",x===p)});if(p==="log")rLog();if(p==="dash")rDash();if(p==="settings"){budM=curM;rSet()}}
 
 // ── SETUP ──
 function saveSetup(){
@@ -524,7 +529,7 @@ function skipSetup(){
   document.getElementById("setupScreen").classList.add("hide");
   // Load from localStorage
   cats=lsGetCats()||JSON.parse(JSON.stringify(DC));
-  exps=lsGetExp(mk());
+  exps=lsGetExp(curM);
   if(cats.length)selCat=cats[0].id;
   finishStart();
 }
@@ -565,7 +570,7 @@ async function seedAndStart(){
       }
 
       // Migrate current month data if exists in localStorage
-      const curM=mk();
+      const curM=curM;
       if(curM!=="2026-08"&&curM!=="2026-07"){
         const lsCurE=lsGetExp(curM);
         if(lsCurE.length){const fsE=await fsGetExp(curM);if(!fsE.length)await fsSetExp(curM,lsCurE)}
@@ -578,13 +583,13 @@ async function seedAndStart(){
     try{await mergeLocal()}catch(e){console.error("mergeLocal",e)}
 
     // Load current month data
-    exps=await fsGetExp(mk());
-    budgetCache[mk()]=await fsGetBud(mk());
+    exps=await fsGetExp(curM);
+    budgetCache[curM]=await fsGetBud(curM);
     if(cats.length)selCat=cats[0].id;
 
     // Start real-time listeners
     listenCats();
-    listenMonth(mk());
+    listenMonth(curM);
 
     finishStart();
   }catch(e){
@@ -637,7 +642,7 @@ async function mergeLocal(){
 function finishStart(){
   document.getElementById("loadingScreen").classList.add("hide");
   document.getElementById("appWrap").classList.remove("hide");
-  document.getElementById("monthLabel").textContent="Budget · "+mn(mk());
+  document.getElementById("monthLabel").textContent="Budget · "+mn(curM);setDateDefault();
   document.getElementById("amtIn").addEventListener("keydown",e=>{if(e.key==="Enter")addExpense()});
   document.getElementById("noteIn").addEventListener("keydown",e=>{if(e.key==="Enter")addExpense()});
 
@@ -660,7 +665,7 @@ function resetFb(){
 
 // ── TRACKER ──
 function rT(){
-  const b=lb(mk()),spBy={};cats.forEach(c=>spBy[c.id]=0);exps.forEach(e=>spBy[e.cat]=(spBy[e.cat]||0)+e.amount);
+  const b=lb(curM),spBy={};cats.forEach(c=>spBy[c.id]=0);exps.forEach(e=>spBy[e.cat]=(spBy[e.cat]||0)+e.amount);
   const tB=b._total||cats.reduce((s,c)=>s+(b[c.id]||0),0),tS=exps.reduce((s,e)=>s+e.amount,0),tR=tB-tS,tP=tB>0?Math.min(100,tS/tB*100):0;
   document.getElementById("totRem").textContent=fmt(tR);document.getElementById("totSpent").textContent=fmt(tS);document.getElementById("totBud").textContent=fmt(tB);
   document.getElementById("balCard").className="bal"+(tR<0?" over":"");
@@ -685,11 +690,38 @@ function rT(){
 }
 function selC(id){selCat=id;fCat=id;rT()}
 function setF(id){fCat=id;rT()}
-function addExpense(){const v=parseFloat(String(document.getElementById("amtIn").value).replace(",","."));if(!v||v<=0)return;if(!selCat){toast("Select a category first");return}const n=document.getElementById("noteIn").value.trim();const e={id:Date.now(),amount:v,note:n,cat:selCat,date:new Date().toISOString()};exps.unshift(e);document.getElementById("amtIn").value="";document.getElementById("noteIn").value="";se(mk(),exps);rT();synA(e)}
+function addExpense(){
+  const v=parseFloat(String(document.getElementById("amtIn").value).replace(",","."));if(!v||v<=0)return;
+  if(!selCat){toast("Select a category first");return}
+  const n=document.getElementById("noteIn").value.trim();
+  let dt=new Date();const dv=document.getElementById("dateIn").value;
+  if(dv){const[y,mo,da]=dv.split("-").map(Number);dt=new Date(y,mo-1,da,dt.getHours(),dt.getMinutes(),dt.getSeconds())}
+  const dk=dt.getFullYear()+"-"+String(dt.getMonth()+1).padStart(2,"0");
+  if(dk!==curM){toast("Pick a date in "+mn(curM));return}
+  const e={id:Date.now(),amount:v,note:n,cat:selCat,date:dt.toISOString()};
+  exps.unshift(e);exps.sort((a,b)=>new Date(b.date)-new Date(a.date));
+  document.getElementById("amtIn").value="";document.getElementById("noteIn").value="";
+  se(curM,exps);rT();synA(e)}
+// ── MONTH SWITCHING (Tracker) ──
+let setMTok=0;
+function setDateDefault(){const t=new Date();const[y,m]=curM.split("-").map(Number);const last=new Date(y,m,0).getDate();const day=curM===mk()?t.getDate():Math.min(t.getDate(),last);const el=document.getElementById("dateIn");el.min=curM+"-01";el.max=curM+"-"+String(last).padStart(2,"0");el.value=curM+"-"+String(day).padStart(2,"0")}
+async function setM(m){
+  const tok=++setMTok;curM=m;fCat="all";
+  document.getElementById("monthLabel").textContent="Budget · "+mn(curM);setDateDefault();
+  if(useFirebase){
+    exps=expCache[m]||[];rT();
+    const e=await fsGetExp(m),b=await fsGetBud(m);
+    if(tok!==setMTok)return;
+    exps=e;expCache[m]=e;budgetCache[m]=b;listenMonth(m);
+  }else{exps=lsGetExp(m);budgetCache[m]=lsGetBud(m)}
+  rT();
+}
+function trkMP(){setM(pm(curM))}
+function trkMN(){if(!canNext(curM)){toast("Can't go further ahead");return}setM(nm(curM))}
 function delE(id){
   setTimeout(function(){
     if(window.confirm("Delete this expense?")){
-      exps=exps.filter(e=>e.id!==id);se(mk(),exps);rT();synD(id);
+      exps=exps.filter(e=>e.id!==id);se(curM,exps);rT();synD(id);
     }
   },50);
 }
@@ -698,7 +730,7 @@ function delE(id){
 async function rLog(){
   document.getElementById("logML").textContent=mn(logM);
   let d;
-  if(logM===mk()){d=exps}
+  if(logM===curM){d=exps}
   else if(expCache[logM]){d=expCache[logM]}
   else if(useFirebase){d=await fsGetExp(logM);expCache[logM]=d}
   else{d=lsGetExp(logM);expCache[logM]=d}
@@ -728,12 +760,13 @@ function logMN(){if(!canNext(logM))return;logM=nm(logM);rLog()}
 
 // ── DASHBOARD ──
 function rDash(){
-  const b=lb(mk()),spBy={};cats.forEach(c=>spBy[c.id]=0);exps.forEach(e=>spBy[e.cat]=(spBy[e.cat]||0)+e.amount);
+  const b=lb(curM),spBy={};cats.forEach(c=>spBy[c.id]=0);exps.forEach(e=>spBy[e.cat]=(spBy[e.cat]||0)+e.amount);
   const tB=b._total||cats.reduce((s,c)=>s+(b[c.id]||0),0),tS=exps.reduce((s,e)=>s+e.amount,0),tR=tB-tS;
-  const today=new Date();const dom=today.getDate()||1;const avgDay=dom>0?(tS/dom):0;
+  const today=new Date();const[dy,dm]=curM.split("-").map(Number);const isCur=curM===mk();const dim=new Date(dy,dm,0).getDate();const dom=isCur?(today.getDate()||1):dim;const avgDay=dom>0?(tS/dom):0;
   const topCat=cats.reduce((best,c)=>(spBy[c.id]||0)>(best.v||0)?{c:c,v:spBy[c.id]||0}:best,{c:null,v:0});
   const pctUsed=tB>0?Math.round(tS/tB*100):0;
 
+  document.getElementById("dashHdr").textContent="Dashboard · "+mn(curM);
   document.getElementById("kpis").innerHTML=
     '<div class="kpi"><div class="kv">'+fmt(tB)+'</div><div class="kl">Total Budget</div></div>'+
     '<div class="kpi"><div class="kv">'+fmt(tS)+'</div><div class="kl">Total Spent</div></div>'+
@@ -753,7 +786,7 @@ function rDash(){
     return'<div class="hbar-row"><span class="hbar-label">'+esc(c.label)+'</span><div class="hbar-track"><div class="hbar-fill" style="width:'+pct+'%;background:'+(pct>90?'var(--red)':c.color)+'"></div><span class="hbar-val">'+pct+'%</span></div></div>'}).join("");
 
   // Daily spending chart
-  const days=[],now2=new Date();
+  const days=[],now2=isCur?new Date():new Date(dy,dm-1,dim,12);
   for(let i=13;i>=0;i--){const d=new Date(now2);d.setDate(d.getDate()-i);const k=d.toISOString().slice(0,10);days.push({key:k,total:0,byCat:{}})}
   exps.forEach(e=>{const k=new Date(e.date).toISOString().slice(0,10);const day=days.find(d=>d.key===k);if(day){day.total+=e.amount;day.byCat[e.cat]=(day.byCat[e.cat]||0)+e.amount}});
   const maxD=Math.max(...days.map(d=>d.total),10);
@@ -794,6 +827,7 @@ function rDash(){
   wrap.appendChild(tip||Object.assign(document.createElement("div"),{className:"dchart-tip",id:"dchartTip"}));
 
   window._chartDays=days;
+  document.getElementById("dTitle").textContent=isCur?"Daily Spending (Last 14 Days)":"Daily Spending (Last 14 Days of "+mn(curM)+")";
 }
 
 function showTip(idx,el){
@@ -853,7 +887,7 @@ async function rSet(){
 }
 function budMP(){budM=pm(budM);rSet()}
 function budMN(){if(!canNext(budM))return;budM=nm(budM);rSet()}
-function saveBuds(){const b={};b._total=parseFloat(String(document.getElementById("bf-total").value).replace(",","."))||0;cats.forEach(c=>{b[c.id]=parseFloat(String(document.getElementById("bf-"+c.id).value).replace(",","."))||0});sb(budM,b);toast("Budgets saved for "+mn(budM));if(budM===mk())rT();synB(budM)}
+function saveBuds(){const b={};b._total=parseFloat(String(document.getElementById("bf-total").value).replace(",","."))||0;cats.forEach(c=>{b[c.id]=parseFloat(String(document.getElementById("bf-"+c.id).value).replace(",","."))||0});sb(budM,b);toast("Budgets saved for "+mn(budM));if(budM===curM)rT();synB(budM)}
 async function copyPrev(){
   const prevM=pm(budM);
   let pb;
@@ -906,14 +940,14 @@ function delC(id){
   }else{
     // Check if there's existing localStorage data (old version)
     const hasCats=localStorage.getItem("bt_cats");
-    const hasExp=localStorage.getItem("bt_ex:"+mk());
+    const hasExp=localStorage.getItem("bt_ex:"+curM);
     const hasOldUrl=localStorage.getItem("bt_url");
     if(hasCats||hasExp||hasOldUrl){
       // Old version user — start in offline mode, prompt to upgrade
       su=hp("gs")||hasOldUrl||"";
       useFirebase=false;
       cats=lsGetCats()||JSON.parse(JSON.stringify(DC));
-      exps=lsGetExp(mk());
+      exps=lsGetExp(curM);
       if(cats.length)selCat=cats[0].id;
       // Seed if needed
       if(!localStorage.getItem("bt_s3")){
@@ -923,7 +957,7 @@ function delC(id){
         if(!localStorage.getItem("bt_ex:2026-07"))lsSetExp("2026-07",SEED_EXPS_JUL);
         localStorage.setItem("bt_s3","1");
         cats=lsGetCats()||JSON.parse(JSON.stringify(DC));
-        exps=lsGetExp(mk());
+        exps=lsGetExp(curM);
       }
       finishStart();
     }else{
